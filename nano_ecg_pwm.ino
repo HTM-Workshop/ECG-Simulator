@@ -34,22 +34,22 @@ uint8_t pwm_vfib[0x20];     // these values are dynamically computed in setup()
 
 #ifdef ENABLE_MODE_SELECTOR
 // PORTD 2,3,4
-inline uint8_t get_mode(void) {
+static inline uint8_t get_mode(void) {
     return((PIND >> 2) & 0x7);
 }
 #endif
 
-inline void disable_resp(void) {
+static inline void disable_resp(void) {
     TCCR2B = 0;
 }
 
-inline void enable_resp(void) {
+static inline void enable_resp(void) {
     TCCR2B = 0x3;       // (clk/1024) prescaler
 }
 
 // Since there is only one PWM pin used that has been pre-set in setup(), 
 // this routine is faster than calling analogWrite()
-inline void pwm_dc(const uint8_t duty_cycle) {
+static inline void pwm_dc(const uint8_t duty_cycle) {
     OCR1A = duty_cycle;
 }
 
@@ -126,8 +126,6 @@ void loop(void) {
             heart_rate = BPM80;
             resp_rate = RESP12;
             enable_resp();
-            pinMode(13, OUTPUT);
-            digitalWrite(13, HIGH);
             switch(current_mode) {
                 case 0:             // normal sinus rhythm, 80BPM
                     break;
