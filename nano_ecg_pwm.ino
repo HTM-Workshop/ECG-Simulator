@@ -33,27 +33,29 @@ uint8_t pwm_vtach[0x20] {
 uint8_t pwm_vfib[0x20];     // these values are dynamically computed in setup()
 
 #ifdef ENABLE_MODE_SELECTOR
+// For whatever reason, the optimizer doesn't always inline these functions
+// Force inlining with the __attribute__ modifier.  
 // PORTD 2,3,4
-static inline uint8_t get_mode(void) {
+uint8_t __attribute__((always_inline)) get_mode(void) {
     return((PIND >> 2) & 0x7);
 }
 #endif
 
-static inline void disable_resp(void) {
+void __attribute__((always_inline)) disable_resp(void) {
     TCCR2B = 0;
 }
 
-static inline void enable_resp(void) {
+void __attribute__((always_inline)) enable_resp(void) {
     TCCR2B = 0x3;       // (clk/1024) prescaler
 }
 
 // Since there is only one PWM pin used that has been pre-set in setup(), 
 // this routine is faster than calling analogWrite()
-static inline void pwm_dc(const uint8_t duty_cycle) {
+void __attribute__((always_inline)) pwm_dc(const uint8_t duty_cycle) {
     OCR1A = duty_cycle;
 }
 
-void pwm_array_sequence(const uint8_t *sequence_array, const uint8_t rate) {
+void __attribute__((hot)) pwm_array_sequence(const uint8_t *sequence_array, const uint8_t rate) {
     static uint8_t counter;
     uint8_t value = sequence_array[counter];
     counter = (counter + 1) % rate;
@@ -82,6 +84,10 @@ ISR(TIMER2_OVF_vect) {
     }
 }
 
+// Since this function is only called once, we can use the Arduino-core functions
+// Arduino-core functions should be avoided when optimizing for speed. 
+// NOTE: this microcontroller must have at least three, independent interrupt timers
+// TIMER0 is reserved for the delay function and can't be used. 
 void setup(void) {
     pinMode(5, OUTPUT);
     pinMode(10, OUTPUT);
@@ -93,20 +99,23 @@ void setup(void) {
     // Enable non-inverted, high-speed PWM for pin 9 (PB1) on TIMER1
     // OCR1A register determines duty cycle in this mode (range 0 - 255).
     // Registers and constant values taken from ATMega328P datasheet
+    cli();
     TCCR1A |= _BV(COM1A1) | _BV(WGM10);
     TCCR1B |= _BV(CS10) | _BV(WGM12);
 
     // Enable TIMER2 overflow interrupt for respiration routine
     // Allows the respiratory simulation to run asynchronously to the cardiac 
     // waveforms
-    cli();
     TCCR2A = 0;
     enable_resp(); 
     TCNT2 = 0;
     TIMSK2 = _BV(TOIE2);    // enable TIMER2 overflow interrupt
     sei();
     
-    // precompute vfib values 
+    // precompute vfib values
+    // This trig algorithm roughly simulates the random-yet-cyclical nature
+    // of V-FIB. Enough to trigger the V-FIB alarms, usually. It will still
+    // occasionally be seen as a V-RUN.
     for(uint8_t i = 0; i < 0x20; i++)
         pwm_vfib[i] = (50 * (sin(i / 3) * sin((i / 3) * 2))) + 50;
 }
@@ -156,7 +165,7 @@ void loop(void) {
             }
         }
 
-#endif
-        delay(master_delay);
+#endif      // ENABLE_MODE_SELECTOR
+        _delay_ms(master_delay);
     }
 }
