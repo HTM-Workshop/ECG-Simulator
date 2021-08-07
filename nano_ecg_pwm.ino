@@ -6,7 +6,7 @@ enum hr_rate {
     BPM40  = 0x3C,
     BPM80  = 0x1E, 
     BPM120 = 0x14,
-    TACH = 0xF
+    TACH = 0xF,
 };
 
 #ifndef SPEED_8_MHZ
@@ -20,17 +20,19 @@ enum resp_rate {
     RESP38 = 0x300
 };
 #endif
-uint8_t pwm_norm_sr[0x40] {
-    10, 13, 15, 20, 30, 40, 30, 20, 0, 150, 255, 0, 0, 15, 17, 19, 21,
-    24, 30, 40, 50, 60, 55, 50, 30, 20, 10, 10, 10, 10, 10, 10,
+uint8_t nsr_fragment[] = {
+    35, 38, 35, 20, 20, 20, 25, 5, 
+    140, 255, 0, 18, 20, 20, 25, 
+    35, 45, 55, 58, 56, 25
 };
+uint8_t pwm_norm_sr[0x40];
 
 uint8_t pwm_vtach[0x20] {
     0, 100, 150, 200, 220, 240, 250, 240, 255, 210, 180, 140, 100, 80, 40, 10,
     0, 100, 150, 200, 220, 240, 250, 240, 255, 210, 180, 140, 100, 80, 40, 10,
 };
 
-uint8_t pwm_vfib[0x20];     // these values are dynamically computed in setup()
+uint8_t pwm_vfib[0x40];     // these values are dynamically computed in setup()
 
 #ifdef ENABLE_MODE_SELECTOR
 // For whatever reason, the optimizer doesn't always inline these functions
@@ -116,8 +118,14 @@ void setup(void) {
     // This trig algorithm roughly simulates the random-yet-cyclical nature
     // of V-FIB. Enough to trigger the V-FIB alarms, usually. It will still
     // occasionally be seen as a V-RUN.
-    for(uint8_t i = 0; i < 0x20; i++)
+    for(uint8_t i = 0; i < sizeof(pwm_vfib); i++)
         pwm_vfib[i] = (50 * (sin(i / 3) * sin((i / 3) * 2))) + 50;
+
+    // create normal sinus rhythm sequence from nsr_fragment and baseline offset
+    for(uint8_t i = 0; i < sizeof(pwm_norm_sr); i++)
+        pwm_norm_sr[i] = 20;
+    for(uint8_t i = 0; i < sizeof(nsr_fragment); i++)
+        pwm_norm_sr[i] = nsr_fragment[i];
 }
 
 void loop(void) {
@@ -166,6 +174,6 @@ void loop(void) {
         }
 
 #endif      // ENABLE_MODE_SELECTOR
-        _delay_ms(master_delay);
+        delay(master_delay);
     }
 }
