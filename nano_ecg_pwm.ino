@@ -22,14 +22,14 @@ enum resp_rate {
 #endif
 uint8_t nsr_fragment[] = {
     35, 38, 35, 20, 20, 20, 25, 5, 
-    140, 255, 0, 18, 20, 20, 25, 
+    140, 255, 0, 20, 20, 20, 25, 
     35, 45, 55, 58, 56, 25
 };
 uint8_t pwm_norm_sr[0x40];
 
-uint8_t pwm_vtach[0x20] {
-    0, 100, 150, 200, 220, 240, 250, 240, 255, 210, 180, 140, 100, 80, 40, 10,
-    0, 100, 150, 200, 220, 240, 250, 240, 255, 210, 180, 140, 100, 80, 40, 10,
+uint8_t pwm_vtach[0x10] {
+    0, 100, 150, 200, 220, 240, 250, 240, 
+    255, 210, 180, 140, 100, 80, 40, 10,
 };
 
 uint8_t pwm_vfib[0x40];     // these values are dynamically computed in setup()
@@ -164,6 +164,7 @@ void loop(void) {
                     break;
                 case 6:             // V-tach
                     current_sequence = pwm_vtach;
+                    heart_rate = TACH;
                     resp_rate = RESP38;
                     break;
                 case 7:             // V-fib
