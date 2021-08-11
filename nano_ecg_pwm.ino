@@ -1,7 +1,14 @@
+
 #define ENABLE_MODE_SELECTOR
 //#define ENABLE_RESP_LED
 //#define SPEED_8_MHZ
 #define PINOUT 9
+#ifndef SPEED_8_MHZ
+#define F_CPU 16000000UL
+#else
+#define F_CPU 8000000UL
+#endif
+
 enum hr_rate {
     BPM40  = 0x3C,
     BPM80  = 0x1E, 
@@ -57,7 +64,7 @@ void __attribute__((always_inline)) pwm_dc(const uint8_t duty_cycle) {
     OCR1A = duty_cycle;
 }
 
-void __attribute__((hot)) pwm_array_sequence(const uint8_t *sequence_array, const uint8_t rate) {
+void __attribute__((hot)) pwm_array_sequence(const uint8_t *const sequence_array, const uint8_t rate) {
     static uint8_t counter;
     uint8_t value = sequence_array[counter];
     counter = (counter + 1) % rate;
@@ -128,7 +135,7 @@ void setup(void) {
         pwm_norm_sr[i] = nsr_fragment[i];
 }
 
-void loop(void) {
+void __attribute__((hot)) loop(void) {
     uint8_t *current_sequence = pwm_norm_sr;
     uint8_t heart_rate = BPM80;
     uint8_t master_delay = 25;
