@@ -18,13 +18,13 @@ enum hr_rate {
 
 #ifndef SPEED_8_MHZ
 enum resp_rate {
-    RESP12 = 0x1300,
-    RESP38 = 0x600
+    RESP12 = 150,
+    RESP38 = 50 
 };
 #else
 enum resp_rate {
-    RESP12 = 0x980,
-    RESP38 = 0x300
+    RESP12 = 75,
+    RESP38 = 25
 };
 #endif
 uint8_t nsr_fragment[] = {
@@ -55,7 +55,7 @@ void __attribute__((always_inline)) disable_resp(void) {
 }
 
 void __attribute__((always_inline)) enable_resp(void) {
-    TCCR2B = 0x3;       // (clk/1024) prescaler
+    TCCR2B = 0x7;       // (clk/1024) prescaler
 }
 
 // Since there is only one PWM pin used that has been pre-set in setup(), 
@@ -82,7 +82,7 @@ void __attribute__((hot)) pwm_array_sequence(const uint8_t *const sequence_array
 // hardware when this routine is called. 
 static long resp_rate = RESP12;
 ISR(TIMER2_OVF_vect) {
-    static unsigned long counter;
+    static uint8_t counter = 0;
     counter = (counter + 1) % resp_rate;
     if(counter == 0) {
         DDRB = DDRB ^ 0x4;
