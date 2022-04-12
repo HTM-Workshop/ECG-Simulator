@@ -1,4 +1,4 @@
-
+//#define ENABLE_RESP_SIM         // comment out to disable resp sim
 #define ENABLE_MODE_SELECTOR
 //#define ENABLE_RESP_LED
 //#define SPEED_8_MHZ
@@ -55,7 +55,9 @@ void __attribute__((always_inline)) disable_resp(void) {
 }
 
 void __attribute__((always_inline)) enable_resp(void) {
+#ifdef ENABLE_RESP_SIM
     TCCR2B = 0x7;       // (clk/1024) prescaler
+#endif
 }
 
 // Since there is only one PWM pin used that has been pre-set in setup(), 
@@ -115,11 +117,13 @@ void setup(void) {
     // Enable TIMER2 overflow interrupt for respiration routine
     // Allows the respiratory simulation to run asynchronously to the cardiac 
     // waveforms
+#ifdef ENABLE_RESP_SIM
     TCCR2A = 0;
     enable_resp(); 
     TCNT2 = 0;
     TIMSK2 = _BV(TOIE2);    // enable TIMER2 overflow interrupt
     sei();
+#endif
     
     // precompute vfib values
     // This trig algorithm roughly simulates the random-yet-cyclical nature
