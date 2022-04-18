@@ -122,8 +122,8 @@ void setup(void) {
     enable_resp(); 
     TCNT2 = 0;
     TIMSK2 = _BV(TOIE2);    // enable TIMER2 overflow interrupt
-    sei();
 #endif
+    sei();
     
     // precompute vfib values
     // This trig algorithm roughly simulates the random-yet-cyclical nature
