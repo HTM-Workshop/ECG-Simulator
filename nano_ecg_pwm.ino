@@ -101,7 +101,9 @@ ISR(TIMER2_OVF_vect) {
 // TIMER0 is reserved for the delay function and can't be used. 
 void setup(void) {
     pinMode(5, OUTPUT);
+#ifdef ENABLE_RESP_SIM
     pinMode(10, OUTPUT);
+#endif
     pinMode(PINOUT, OUTPUT);
 #ifdef ENABLE_RESP_LED
     pinMode(8, OUTPUT);
