@@ -1,4 +1,5 @@
 //#define ENABLE_RESP_SIM         // comment out to disable resp sim
+//#define INTERNAL_VOLT_REF       // uncomment to select internal 1.1V reference
 #define ENABLE_MODE_SELECTOR
 //#define ENABLE_RESP_LED
 //#define SPEED_8_MHZ
@@ -10,9 +11,9 @@
 #endif
 
 enum hr_rate {
-    BPM40  = 0x3C,
-    BPM80  = 0x1E, 
-    BPM120 = 0x14,
+    BPM40  = 0x3B,
+    BPM80  = 0x1D, 
+    BPM120 = 0x13,
     TACH = 0xF,
 };
 
@@ -100,6 +101,10 @@ ISR(TIMER2_OVF_vect) {
 // NOTE: this microcontroller must have at least three, independent interrupt timers
 // TIMER0 is reserved for the delay function and can't be used. 
 void setup(void) {
+#ifdef INTERNAL_VOLT_REF
+    analogReference(EXTERNAL);
+#endif
+    Serial.begin(115200);
     pinMode(5, OUTPUT);
 #ifdef ENABLE_RESP_SIM
     pinMode(10, OUTPUT);
@@ -147,7 +152,9 @@ void __attribute__((hot)) loop(void) {
     uint8_t master_delay = 25;
     uint8_t current_mode = 0;
     while(1) {
-        pwm_array_sequence(current_sequence, heart_rate);
+        if(current_mode != 7) {
+            pwm_array_sequence(current_sequence, heart_rate);
+        }
 #ifdef ENABLE_MODE_SELECTOR
         uint8_t mode = get_mode();
         if(mode != current_mode) {
@@ -188,6 +195,11 @@ void __attribute__((hot)) loop(void) {
         }
 
 #endif      // ENABLE_MODE_SELECTOR
+        if(Serial.available()) {
+            Serial.read();
+            Serial.println(analogRead(A0));
+            Serial.flush();
+        }
         delay(master_delay);
     }
 }
