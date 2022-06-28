@@ -1,3 +1,8 @@
+/*
+ *      DIY-ECG-SIM
+ *   v1.0 - JUN/28/2022
+ */
+
 //#define ENABLE_CUSTOM_WAVE
 #define ENABLE_RESP_SIM         // comment out to disable resp sim
 #define ENABLE_MODE_SELECTOR
