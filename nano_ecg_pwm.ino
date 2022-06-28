@@ -1,12 +1,19 @@
-//#define ENABLE_RESP_SIM         // comment out to disable resp sim
+//#define ENABLE_CUSTOM_WAVE
+#define ENABLE_RESP_SIM         // comment out to disable resp sim
 #define ENABLE_MODE_SELECTOR
 //#define ENABLE_RESP_LED
 //#define SPEED_8_MHZ
 #define PINOUT 9
+
+
 #ifndef SPEED_8_MHZ
 #define F_CPU 16000000UL
 #else
 #define F_CPU 8000000UL
+#endif
+#ifdef ENABLE_CUSTOM_WAVE
+#include "wave.h"
+#include <string.h>
 #endif
 
 enum hr_rate {
@@ -41,6 +48,10 @@ uint8_t pwm_vtach[0x10] {
 
 uint8_t pwm_vfib[0x40];     // these values are dynamically computed in setup()
 
+#ifdef ENABLE_CUSTOM_WAVE
+uint8_t custom_wave[0x40];
+#endif
+
 #ifdef ENABLE_MODE_SELECTOR
 // For whatever reason, the optimizer doesn't always inline these functions
 // Force inlining with the __attribute__ modifier.  
@@ -50,15 +61,16 @@ uint8_t __attribute__((always_inline)) get_mode(void) {
 }
 #endif
 
-void __attribute__((always_inline)) disable_resp(void) {
+void disable_resp(void) {
     TCCR2B = 0;
 }
 
-void __attribute__((always_inline)) enable_resp(void) {
+void enable_resp(void) {
 #ifdef ENABLE_RESP_SIM
     TCCR2B = 0x7;       // (clk/1024) prescaler
 #endif
 }
+void (*resp_enable_fp)(void) = enable_resp;
 
 // Since there is only one PWM pin used that has been pre-set in setup(), 
 // this routine is faster than calling analogWrite()
@@ -90,7 +102,7 @@ ISR(TIMER2_OVF_vect) {
         DDRB = DDRB ^ 0x4;
         PORTB = PORTB & ~0x4;
 #ifdef ENABLE_RESP_LED
-        PORTB = (PORTB ^ 0x1);
+        PORTB = (PORTB ^ 0x20);
 #endif
     }
 }
@@ -106,8 +118,14 @@ void setup(void) {
 #endif
     pinMode(PINOUT, OUTPUT);
 #ifdef ENABLE_RESP_LED
-    pinMode(8, OUTPUT);
+    pinMode(13, OUTPUT);
 #endif
+
+    // If the arduino is reset with all mode switches high,
+    // disable the resp routine by changing the resp_enable_fp 
+    // function pointer.
+    if(get_mode() == 0x7) 
+        resp_enable_fp = disable_resp;
 
     // Enable non-inverted, high-speed PWM for pin 9 (PB1) on TIMER1
     // OCR1A register determines duty cycle in this mode (range 0 - 255).
@@ -139,6 +157,15 @@ void setup(void) {
         pwm_norm_sr[i] = 20;
     for(uint8_t i = 0; i < sizeof(nsr_fragment); i++)
         pwm_norm_sr[i] = nsr_fragment[i];
+
+#ifdef ENABLE_CUSTOM_WAVE
+    for(uint8_t i = 0; i < sizeof(custom_wave); i++)
+        custom_wave[i] = extern_baseline;
+    uint8_t bcount = sizeof(extern_wave_fragment);
+    if(bcount > sizeof(custom_wave))
+        bcount = sizeof(custom_wave);
+    memcpy(custom_wave, extern_wave_fragment, bcount);
+#endif
 }
 
 void __attribute__((hot)) loop(void) {
@@ -155,7 +182,8 @@ void __attribute__((hot)) loop(void) {
             current_sequence = pwm_norm_sr;
             heart_rate = BPM80;
             resp_rate = RESP12;
-            enable_resp();
+            resp_enable_fp();
+            //enable_resp();
             switch(current_mode) {
                 case 0:             // normal sinus rhythm, 80BPM
                     break;
@@ -181,8 +209,12 @@ void __attribute__((hot)) loop(void) {
                     resp_rate = RESP38;
                     break;
                 case 7:             // V-fib
-                    current_sequence = pwm_vfib;
                     disable_resp();
+#ifndef ENABLE_CUSTOM_WAVE
+                    current_sequence = pwm_vfib;
+#else
+                    current_sequence = custom_wave;
+#endif
                     break;                                                           
             }
         }
