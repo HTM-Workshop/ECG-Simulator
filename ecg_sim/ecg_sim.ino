@@ -1,12 +1,13 @@
 /*
  *      DIY-ECG-SIM
- *   v1.0 - JUN/28/2022
+ *   v1.0.0 JUN/28/2022
+ *   Written by Kevin Williams
  */
 
 //#define ENABLE_CUSTOM_WAVE
 #define ENABLE_RESP_SIM         // comment out to disable resp sim
 #define ENABLE_MODE_SELECTOR
-//#define ENABLE_RESP_LED
+#define ENABLE_RESP_LED
 //#define SPEED_8_MHZ
 #define PINOUT 9
 
@@ -67,6 +68,7 @@ uint8_t __attribute__((always_inline)) get_mode(void) {
 #endif
 
 void disable_resp(void) {
+    DDRB = DDRB | 0x4;
     TCCR2B = 0;
 }
 
